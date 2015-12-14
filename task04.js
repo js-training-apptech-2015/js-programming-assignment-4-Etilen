@@ -42,34 +42,25 @@ ObjectWithMethodOverloading.prototype = {
     }
 }
 
-
-var currentModule;
-
 var pendingModules = {};
 
 function define(modules, callback) {
-    var modulesPromises = modules.map(loadModule);
-    var loadedModules = Promise.all(modulesPromises);
-    loadedModules.then(function(modules) {
-        var exported = callback.apply(null, modules);
-        currentModule = exported;
-    });
+    Promise.all(modules.map(loadModule))
+        .then(function (modules) {
+            var exported = callback.apply(null, modules);
+            var moduleName = document.currentScript.dataset.name;
+            if (pendingModules[moduleName]) {
+                pendingModules[moduleName](exported);
+            }
+        });
 }
 
 function loadModule(name) {
-    return new Promise(function (resolve, reject){
+    return new Promise(function (resolve, reject) {
         var s = document.createElement('script');
         s.src = name;
         s.setAttribute('data-name', name);
-        s.onload = moduleLoaded
         pendingModules[name] = resolve;
         document.body.appendChild(s);
     });
-}
-
-function moduleLoaded() {
-    var moduleName = this.dataset.name;
-    if (pendingModules[moduleName]) {
-        pendingModules[moduleName](currentModule);
-    }
 }
